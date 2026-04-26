@@ -2,13 +2,24 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 9192;
+const PORT = process.env.PORT || 9192;
 const JSON_PATH = path.join(__dirname, 'RadarType.json');
 
+if (!fs.existsSync(JSON_PATH)) {
+  fs.writeFileSync(JSON_PATH, JSON.stringify({ type: 'Овальный', color: null }), 'utf8');
+}
+
 const server = http.createServer((req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  if (req.method === 'OPTIONS') {
+    return res.writeHead(200).end();
+  }
+
   if (req.method === 'GET') {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    return res.end('OK');
+    return res.writeHead(200, { 'Content-Type': 'text/plain' }).end('OK');
   }
 
   if (req.method === 'POST') {
@@ -23,24 +34,26 @@ const server = http.createServer((req, res) => {
 
         if (command === 'writeFile') {
           fs.writeFileSync(JSON_PATH, content, 'utf8');
-          res.writeHead(200); res.end('OK');
+          res.writeHead(200).end('OK');
+          console.log(`[SAVE] ✅ ${filename}`);
         } else if (command === 'readFile') {
           if (fs.existsSync(JSON_PATH)) {
-            res.writeHead(200); res.end(fs.readFileSync(JSON_PATH, 'utf8'));
+            const data = fs.readFileSync(JSON_PATH, 'utf8');
+            res.writeHead(200).end(data);
+            console.log(`[LOAD] ✅ ${filename}`);
           } else {
-            res.writeHead(200); res.end('');
-            console.log('[LOAD] ⚠️ Файл не найден, отправлен пустой ответ');
+            res.writeHead(200).end('');
           }
         } else {
-          res.writeHead(400); res.end('Unknown command');
+          res.writeHead(400).end('Unknown command');
         }
       } catch (e) {
-        res.writeHead(500); res.end('Error: ' + e.message);
+        res.writeHead(500).end('Error: ' + e.message);
       }
     });
   }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Сервер запущен: http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🟢 Сервер запущен на порту ${PORT}`);
 });
